@@ -41,7 +41,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./telemetry-dashboard
-          file: ./telemetry-dashboard/Dockerfile
+          file: ./docker/Frontend/Dockerfile    
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.short_sha }}
