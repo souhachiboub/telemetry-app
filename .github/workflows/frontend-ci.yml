@@ -40,8 +40,8 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
-          context: ./telemetry-dashboard
-          file: ./docker/Frontend/Dockerfile    
+          context: .                              # ← racine du repo, pas ./telemetry-dashboard
+          file: ./docker/Frontend/Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.short_sha }}
