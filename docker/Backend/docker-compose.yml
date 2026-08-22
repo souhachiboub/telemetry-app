@@ -1,0 +1,31 @@
+services:
+  telemetry-backend:
+    image: telemetry-backend
+    build:
+      context: ../../telemetry-backend
+      dockerfile: ../docker/Backend/Dockerfile
+    container_name: telemetry-backend
+    ports:
+      - "8084:8084"
+    environment:
+      # Noms résolus via les alias DNS déjà présents sur telemetry-network
+      DB_URL: jdbc:postgresql://postgres:5432/mqttdb
+      DB_USERNAME: mqtt_user
+      DB_PASSWORD: mqtt_pass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MQTT_BROKER_URL: ssl://mosquitto:8883
+      MQTT_USERNAME: mqtt
+      MQTT_PASSWORD: mqttroot
+      # telemetry-api n'a pas d'alias "ml-api" -> on utilise son vrai nom
+      ML_API_URL: http://telemetry-api:8000
+      # Reste en localhost : c'est le navigateur du client qui utilise cette valeur (CORS), pas le backend
+      FRONTEND_URL: http://localhost:4200
+    networks:
+      - telemetry-network
+    restart: unless-stopped
+
+networks:
+  telemetry-network:
+    external: true
+    # Réseau déjà créé manuellement et partagé par mqtt-mosquitto, pg-mqtt,
+    # mqtt-kafka et telemetry-api (vérifié via `docker inspect <container>`)

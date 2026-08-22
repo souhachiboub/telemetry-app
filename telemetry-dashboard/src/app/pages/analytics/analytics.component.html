@@ -1,0 +1,153 @@
+<div class="page-head">
+  <h1>Analytics / ML insights</h1>
+
+  <select
+    [ngModel]="selectedVehicle"
+    (ngModelChange)="onVehicleChange($event)"
+    class="vehicle-select">
+
+    @for (v of vehicles; track v) {
+      <option [value]="v">{{ v }}</option>
+    }
+
+  </select>
+</div>
+
+@if (loading) {
+
+  <p class="text-muted">Loading analytics…</p>
+
+} @else {
+
+  <div class="kpi-grid">
+
+    <div class="kpi-card">
+      <p class="kpi-label">Anomalies today</p>
+      <p class="kpi-value num">{{ anomaliesToday }}</p>
+    </div>
+
+    <div class="kpi-card">
+      <p class="kpi-label">Model confidence (avg)</p>
+      <p class="kpi-value num">{{ avgConfidencePct }}</p>
+    </div>
+
+    <div class="kpi-card kpi-card--bad">
+      <p class="kpi-label">Predicted maintenance</p>
+      <p class="kpi-value num">
+        {{ predictedMaintenanceCount }} device(s)
+      </p>
+    </div>
+
+  </div>
+
+
+  <p class="section-label">
+    Anomaly probability over time —
+    {{ selectedVehicle || 'no vehicle selected' }}
+  </p>
+
+  <div class="card">
+
+    @if (chartValues.length) {
+
+      <app-score-chart
+        [labels]="chartLabels"
+        [values]="chartValues" />
+
+    } @else {
+
+      <div class="empty-state">
+        No history yet for this vehicle.
+      </div>
+
+    }
+
+  </div>
+
+
+  <p class="section-label">
+    Recent ML detections (all vehicles)
+  </p>
+
+  <div class="table-card">
+
+    <div class="table-row table-row--head detections-row">
+      <span>Vehicle</span>
+      <span>Risk</span>
+      <span>Probability</span>
+      <span>Recommendation</span>
+      <span>When</span>
+    </div>
+
+    @for (a of paginatedAnomalies; track a.id) {
+
+      <div class="table-row table-row--body detections-row">
+
+        <span class="num">
+          {{ a.vehicleId }}
+        </span>
+
+        <app-status-badge
+          [label]="a.riskLevel"
+          [status]="a.riskLevel" />
+
+        <span class="num">
+          {{ (a.probability * 100).toFixed(0) }}%
+        </span>
+
+        <span class="recommendation">
+          {{ a.recommendation }}
+        </span>
+
+        <span class="text-muted">
+          {{ a.createdAt | date: 'short' }}
+        </span>
+
+      </div>
+
+    } @empty {
+
+      <div class="empty-state">
+        No anomalies detected yet.
+      </div>
+
+    }
+
+  </div>
+
+
+  <!-- PAGINATION -->
+  @if (detectionTotalPages > 1) {
+
+    <div class="pagination">
+
+      <button
+        class="pagination-btn"
+        [disabled]="currentDetectionPage === 1"
+        (click)="previousDetectionPage()">
+        Previous
+      </button>
+
+      @for (page of detectionPages; track page) {
+
+        <button
+          class="pagination-number"
+          [class.active]="currentDetectionPage === page"
+          (click)="goToDetectionPage(page)">
+          {{ page }}
+        </button>
+
+      }
+
+      <button
+        class="pagination-btn"
+        [disabled]="currentDetectionPage === detectionTotalPages"
+        (click)="nextDetectionPage()">
+        Next
+      </button>
+
+    </div>
+
+  }
+
+}

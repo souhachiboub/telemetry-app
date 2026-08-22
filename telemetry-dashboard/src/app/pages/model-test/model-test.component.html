@@ -1,0 +1,175 @@
+<div class="app-shell">
+<!-- Main content -->
+  <main class="main-content">
+
+    <header class="top-header">
+      <div class="greeting">
+        <h1><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5a3 3 0 1 0-5.83 1A3.5 3.5 0 0 0 5 12a3.5 3.5 0 0 0 1.17 6A3 3 0 1 0 12 19Z"/><path d="M12 5a3 3 0 1 1 5.83 1A3.5 3.5 0 0 1 19 12a3.5 3.5 0 0 1-1.17 6A3 3 0 1 1 12 19Z"/><path d="M12 5v14M8 8h2m4 0h2M8 16h2m4 0h2M5 12h4m6 0h4"/></svg> ML prediction</h1>
+        <p>Build a {{ windowSize }}-sample telemetry window and run it through the anomaly model</p>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn"><span class="lucide-icon" data-icon="bell" aria-hidden="true"></span><span class="live-dot"></span></button>
+        <button class="icon-btn"><span class="lucide-icon" data-icon="search" aria-hidden="true"></span></button>
+      </div>
+    </header>
+
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-icon" [style.background]="result ? statusColor() : 'var(--neutral)'">
+          <span class="lucide-icon" [attr.data-icon]="result?.status === 'ANOMALY' ? 'triangle-alert' : 'circle-check'" aria-hidden="true"></span>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Last status</div>
+          <div class="stat-value">{{ result?.status ?? '—' }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" [style.background]="result ? riskColor(result.risk_level) : 'var(--neutral)'">
+          <span class="lucide-icon" data-icon="gauge" aria-hidden="true"></span>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Risk level</div>
+          <div class="stat-value">{{ result?.risk_level ?? '—' }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:var(--neutral)">
+          <span class="lucide-icon" data-icon="cpu" aria-hidden="true"></span>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Model used</div>
+          <div class="stat-value model-value">{{ result?.model_used ?? '—' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-grid">
+      <div class="card">
+        <div class="card-header">
+          <h3>New reading</h3>
+          <span class="card-sub">appended to the sliding window</span>
+        </div>
+
+        <form [formGroup]="readingForm" class="reading-form">
+          <div class="form-section" *ngFor="let group of fieldGroups">
+            <div class="form-section-title">
+              <span class="lucide-icon" [attr.data-icon]="group.icon" aria-hidden="true"></span> {{ group.label }}
+            </div>
+            <div class="form-section-fields">
+              <div class="field" *ngFor="let name of group.fields">
+                <label>{{ fieldLabel(name) }}</label>
+
+                <input *ngIf="fieldType(name) === 'number'" type="number" [formControlName]="name" />
+
+                <select *ngIf="fieldType(name) === 'select-braking'" [formControlName]="name">
+                  <option value="OFF">OFF</option>
+                  <option value="ON">ON</option>
+                </select>
+
+                <select *ngIf="fieldType(name) === 'select-state'" [formControlName]="name">
+                  <option *ngFor="let s of vehicleStates" [value]="s">{{ s }}</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="secondary-btn" [disabled]="quickPredicting" (click)="quickPredict()">
+              <span class="lucide-icon" data-icon="zap" aria-hidden="true"></span>
+              {{ quickPredicting ? 'Predicting…' : 'Quick predict (single reading)' }}
+            </button>
+
+            <input #jsonFileInput type="file" accept="application/json,.json" hidden (change)="onFileSelected($event)" />
+            <button type="button" class="secondary-btn" (click)="jsonFileInput.click()">
+              <span class="lucide-icon" data-icon="upload" aria-hidden="true"></span> Load
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="error-banner" *ngIf="error">
+      <span class="lucide-icon" data-icon="circle-alert" aria-hidden="true"></span> {{ error }}
+    </div>
+
+    <div class="ml-hero-card" *ngIf="result" [class.critical]="result.status === 'ANOMALY'">
+      <div class="ml-hero-header">
+        <div>
+          <h3>{{ result.status === 'ANOMALY' ? 'Anomaly detected' : 'Telemetry nominal' }}</h3>
+          <span>{{ result.model_used }} · {{ windowSize }}-sample window</span>
+        </div>
+        <div class="ml-hero-icon">
+          <span class="lucide-icon" [attr.data-icon]="result.status === 'ANOMALY' ? 'triangle-alert' : 'shield-check'" aria-hidden="true"></span>
+        </div>
+      </div>
+
+      <div class="ml-hero-body">
+        <div class="ml-ring-wrap">
+          <svg viewBox="0 0 36 36">
+            <circle cx="18" cy="18" r="15.5" fill="none" [attr.stroke]="'var(--line)'" stroke-width="4"/>
+            <circle cx="18" cy="18" r="15.5" fill="none" [attr.stroke]="result.status === 'ANOMALY' ? 'var(--critical)' : 'var(--accent)'" stroke-width="4"
+              [attr.stroke-dasharray]="97.4" [attr.stroke-dashoffset]="97.4 - (97.4 * result.probability)"
+              stroke-linecap="round" transform="rotate(-90 18 18)"/>
+          </svg>
+          <div class="ml-ring-center">
+            <span class="ml-ring-value">{{ (result.probability * 100).toFixed(0) }}%</span>
+            <span class="ml-ring-label">{{ result.risk_level }} risk</span>
+          </div>
+        </div>
+
+        <div class="ml-metrics">
+          <div class="ml-metric-row"><span>Status</span><span>{{ result.status }}</span></div>
+          <div class="ml-metric-row"><span>Probability</span><span>{{ (result.probability * 100).toFixed(2) }}%</span></div>
+          <div class="ml-metric-row"><span>Root causes flagged</span><span>{{ result.root_causes.length }}</span></div>
+        </div>
+      </div>
+
+      <p class="ml-recommendation">
+        <span class="lucide-icon" data-icon="lightbulb" aria-hidden="true"></span>
+        <span>{{ result.recommendation }}</span>
+      </p>
+
+      <div class="ml-trend" *ngIf="history.length > 1">
+        <div class="ml-trend-header">
+          <h4 style="font-size:0.82rem;margin:0;font-weight:600;">Session trend</h4>
+          <span>last {{ history.length }} prediction(s)</span>
+        </div>
+        <svg viewBox="0 0 100 32" preserveAspectRatio="none">
+          <polyline [attr.points]="sparklinePoints" fill="none" [attr.stroke]="result.status === 'ANOMALY' ? 'var(--critical)' : 'var(--accent)'" stroke-width="2" vector-effect="non-scaling-stroke"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="card root-cause-card" *ngIf="result">
+      <div class="card-header">
+        <h3>Root cause breakdown</h3>
+        <span class="card-sub">reading vs. threshold</span>
+      </div>
+
+      <div class="empty-state" *ngIf="rootCauseViews.length === 0">
+        <span class="empty-state-icon" aria-hidden="true">✓</span>
+        No flagged sensors — all readings within threshold.
+      </div>
+
+      <div class="root-cause-row" *ngFor="let c of rootCauseViews">
+        <div class="root-cause-top">
+          <div class="root-cause-label">
+            <div class="root-cause-icon" [style.background]="severityColor(c.severity) + '1A'" [style.color]="severityColor(c.severity)">
+              <span class="root-cause-icon-glyph" [attr.data-icon]="c.icon" aria-hidden="true"></span>
+            </div>
+            <span>{{ c.sensor }}</span>
+          </div>
+          <div class="root-cause-values">
+            <span class="value" [style.color]="severityColor(c.severity)">{{ c.value }}{{ c.unit }}</span>
+            <span class="over">+{{ c.overPct.toFixed(0) }}% over limit</span>
+          </div>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" [style.width.%]="c.fillPct" [style.background]="severityColor(c.severity)"></div>
+          <div class="bar-threshold" [style.left.%]="c.thresholdPct" [title]="'Threshold: ' + c.threshold + c.unit"></div>
+        </div>
+        <div class="threshold-label">threshold {{ c.threshold }}{{ c.unit }} — {{ c.issue }}</div>
+      </div>
+    </div>
+  </main>
+</div>

@@ -1,0 +1,17 @@
+services:
+  telemetry-frontend:
+    image: telemetry-frontend
+    build:
+      context: ../..
+      dockerfile: ../docker/Frontend/Dockerfile
+    container_name: telemetry-frontend
+    ports:
+      - "4200:80"
+    networks:
+      - telemetry-network
+    restart: unless-stopped
+
+networks:
+  telemetry-network:
+    external: true
+    

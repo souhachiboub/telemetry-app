@@ -1,0 +1,6 @@
+// Page-specific overrides only -- shared card/table/KPI classes live in
+// src/styles.scss so every dashboard page stays visually consistent.
+
+.table-row {
+  grid-template-columns: 1.2fr 0.9fr 0.9fr 1fr 1fr;
+}

@@ -1,0 +1,136 @@
+<div class="page-head">
+  <h1>Test publisher</h1>
+</div>
+<p class="page-sub">
+  Demo tool only. Publishes readings on the real MQTT topic
+  <code>devices/&#123;vehicleId&#125;/telemetry</code>, so it exercises the full pipeline
+  (MQTT → Kafka → ML API → WebSocket) exactly like a physical device would.
+</p>
+
+<div class="sim-grid">
+  <div class="sim-col">
+
+    <!-- ============================================================ -->
+    <!-- ML SELF-TEST — auto-generated scenarios to exercise the model -->
+    <!-- ============================================================ -->
+    <div class="card">
+      <p class="section-label section-label--first">ML self-test</p>
+      <p class="card-sub">Auto-generated readings to quickly exercise the model end-to-end.</p>
+
+      <label class="field-block">
+        Target vehicle
+        <input class="text-input num" [(ngModel)]="vehicleId" (ngModelChange)="watchVehicle()" placeholder="device-sim-01" />
+      </label>
+
+      <p class="section-label">Quick scenarios</p>
+      <div class="scenario-toggle">
+        <button [class.active]="scenario === 'normal'" (click)="scenario = 'normal'">Normal</button>
+        <button [class.active]="scenario === 'anomaly'" (click)="scenario = 'anomaly'">Anomaly (escalating)</button>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" [disabled]="busy" (click)="publishOne()">Publish one reading</button>
+        <button class="btn btn--primary" [disabled]="busy" (click)="publishBatch()">
+          Publish {{ batchCount }} readings (fills ML window)
+        </button>
+      </div>
+      <label class="field-inline">
+        Batch size
+        <input type="number" class="text-input text-input--small num" [(ngModel)]="batchCount" min="1" max="50" />
+      </label>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- PUBLISH MESSAGE WITH PAYLOAD — hand-edited or file-sourced    -->
+    <!-- ============================================================ -->
+    <div class="card">
+      <p class="section-label section-label--first">Publish message with payload</p>
+      <p class="card-sub">Send a specific reading, either typed by hand or extracted from a shared JSON file.</p>
+
+      <p class="section-label">Manual reading</p>
+      <div class="manual-grid">
+        <label>Trip time (s) <input type="number" class="text-input num" [(ngModel)]="manual.Trip_Time_s" /></label>
+        <label>Speed (km/h) <input type="number" class="text-input num" [(ngModel)]="manual.Speed_kmh" /></label>
+        <label>Motor RPM <input type="number" class="text-input num" [(ngModel)]="manual.Motor_RPM" /></label>
+        <label>Motor temp (°C) <input type="number" class="text-input num" [(ngModel)]="manual.Motor_Temp_C" /></label>
+        <label>Battery SOC (%) <input type="number" class="text-input num" [(ngModel)]="manual.Battery_SOC_pct" /></label>
+        <label>Battery voltage (V) <input type="number" class="text-input num" [(ngModel)]="manual.Battery_Voltage_V" /></label>
+        <label>Battery current (A) <input type="number" class="text-input num" [(ngModel)]="manual.Battery_Current_A" /></label>
+        <label>Battery temp (°C) <input type="number" class="text-input num" [(ngModel)]="manual.Battery_Temp_C" /></label>
+        <label>Ambient temp (°C) <input type="number" class="text-input num" [(ngModel)]="manual.Ambient_Temp_C" /></label>
+        <label>
+          Braking
+          <select class="text-input" [(ngModel)]="manual.Braking_Active">
+            <option value="OFF">OFF</option>
+            <option value="ON">ON</option>
+          </select>
+        </label>
+        <label>
+          Vehicle state
+          <select class="text-input" [(ngModel)]="manual.Vehicle_State">
+            <option value="Cruising">Cruising</option>
+            <option value="Accelerating">Accelerating</option>
+            <option value="Braking">Braking</option>
+            <option value="Idle">Idle</option>
+          </select>
+        </label>
+      </div>
+      <button class="btn btn--primary" [disabled]="busy" (click)="publishManual()">Publish this reading</button>
+
+      <div class="upload-divider"></div>
+
+      <p class="section-label">Upload a shared telemetry file</p>
+      
+
+      <div class="upload-row">
+        <label class="btn file-input-label" for="telemetry-file">Choisir un fichier</label>
+        <input
+          id="telemetry-file"
+          type="file"
+          class="file-input-native"
+          accept="application/json"
+          (change)="onFileSelected($event)"
+        />
+        <span class="file-name">{{ selectedFile ? selectedFile.name : 'Aucun fichier choisi' }}</span>
+        <button class="btn btn--primary" [disabled]="!selectedFile || uploadBusy" (click)="uploadFile()">
+          {{ uploadBusy ? 'Uploading…' : 'Extract & publish from file' }}
+        </button>
+      </div>
+
+      @if (uploadResult) {
+        <div class="upload-result" [class.upload-result--error]="!uploadResult.success">
+          @if (uploadResult.success) {
+            Published {{ uploadResult.recordsReceived }} reading(s) for <span class="num">{{ uploadResult.vehicleId }}</span>.
+          } @else {
+            {{ uploadResult.error }}
+          }
+        </div>
+      }
+    </div>
+
+  </div>
+
+  <div class="card">
+    <p class="section-label section-label--first">Live response — {{ vehicleId }}</p>
+    <div class="event-list">
+      @for (event of liveEvents; track $index) {
+        <div class="event-row">
+          @if (event.status === 'COLLECTING') {
+            <app-status-badge label="COLLECTING" status="COLLECTING" />
+            <span class="num">{{ event.readings_received }}/{{ event.readings_required }} readings</span>
+          } @else if (event.status === 'ERROR') {
+            <app-status-badge label="ERROR" status="ERROR" />
+            <span class="text-muted">{{ event.message }}</span>
+          } @else {
+            <app-status-badge [label]="event.status" [status]="event.status" />
+            <app-status-badge [label]="event.risk_level ?? ''" [status]="event.risk_level ?? ''" />
+            <span class="num">{{ ((event.probability ?? 0) * 100).toFixed(1) }}%</span>
+            <span class="text-muted event-reco">{{ event.recommendation }}</span>
+          }
+        </div>
+      } @empty {
+        <div class="empty-state">Nothing published yet for this vehicle.</div>
+      }
+    </div>
+  </div>
+</div>

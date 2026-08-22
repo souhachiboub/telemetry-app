@@ -1,0 +1,83 @@
+<div class="page-head">
+  <h1>Alerts</h1>
+</div>
+
+@if (loading) {
+  <p class="text-muted">Loading alerts…</p>
+}
+@else if (!alerts.length) {
+  <div class="empty-state">
+    No anomalies detected. This page updates live as they happen.
+  </div>
+}
+@else {
+  <div class="alert-list">
+    @for (alert of paginatedAlerts; track alert.when.getTime() + alert.vehicleId) {
+      <div
+        class="alert-card"
+        [class.alert-card--live]="alert.live">
+
+        <div class="alert-head">
+          <span class="num alert-vehicle">
+            {{ alert.vehicleId }}
+          </span>
+
+          <app-status-badge
+            [label]="alert.riskLevel"
+            [status]="alert.riskLevel" />
+
+          <span class="num alert-prob">
+            {{ (alert.probability * 100).toFixed(0) }}%
+          </span>
+
+          <span class="text-muted alert-time">
+            {{ alert.when | date: 'short' }}
+          </span>
+        </div>
+
+        <p class="alert-recommendation">
+          {{ alert.recommendation }}
+        </p>
+
+        @if (alert.rootCauses.length) {
+          <div class="root-causes">
+            @for (cause of alert.rootCauses; track cause.sensor) {
+              <span class="cause-chip">
+                {{ cause.sensor }} — {{ cause.issue }}
+              </span>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  @if (totalPages > 1) {
+    <div class="pagination">
+
+      <button
+        class="pagination-btn"
+        [disabled]="currentPage === 1"
+        (click)="previousPage()">
+        Previous
+      </button>
+
+      @for (page of pages; track page) {
+        <button
+          class="pagination-number"
+          [class.active]="currentPage === page"
+          (click)="goToPage(page)">
+          {{ page }}
+        </button>
+      }
+
+      <button
+        class="pagination-btn"
+        [disabled]="currentPage === totalPages"
+        (click)="nextPage()">
+        Next
+      </button>
+
+    </div>
+  }
+}

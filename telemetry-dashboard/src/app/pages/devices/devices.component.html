@@ -1,0 +1,33 @@
+<div class="page-head">
+  <h1>Devices</h1>
+</div>
+
+@if (loading) {
+  <p class="text-muted">Loading devices…</p>
+} @else {
+  <div class="table-card">
+    <div class="table-row table-row--head devices-row">
+      <span>Vehicle</span>
+      <span>Status</span>
+      <span>Risk level</span>
+      <span>Model used</span>
+      <span>Recommendation</span>
+      <span>Updated</span>
+    </div>
+
+    @for (device of devices; track device.vehicleId) {
+      <a class="table-row table-row--body devices-row" [routerLink]="['/devices', device.vehicleId]">
+        <span class="num">{{ device.vehicleId }}</span>
+        <app-status-badge [label]="device.status" [status]="device.status" />
+        <app-status-badge [label]="device.riskLevel" [status]="device.riskLevel" />
+        <span class="text-muted">{{ device.modelUsed }}</span>
+        <span class="recommendation">{{ device.recommendation }}</span>
+        <span class="text-muted">{{ device.createdAt | date: 'short' }}</span>
+      </a>
+    } @empty {
+      <div class="empty-state">
+        No devices reporting yet. Use the <a routerLink="/simulator">Test publisher</a> to simulate one.
+      </div>
+    }
+  </div>
+}
