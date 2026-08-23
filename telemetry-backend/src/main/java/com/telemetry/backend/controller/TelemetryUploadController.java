@@ -15,7 +15,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/telemetry")
-@CrossOrigin(origins = "${app.frontend-url}")
 public class TelemetryUploadController {
 
 

@@ -17,7 +17,6 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/telemetry")
-@CrossOrigin(origins = "${app.frontend-url}")
 public class TelemetryController {
     private final WebClient mlWebClient;
     private final TelemetryPredictionRepository repository;

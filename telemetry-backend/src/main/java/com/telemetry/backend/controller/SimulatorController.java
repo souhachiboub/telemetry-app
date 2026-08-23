@@ -23,7 +23,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/simulator")
-@CrossOrigin(origins = "${app.frontend-url}")
 public class SimulatorController {
 
     private final MqttOutboundConfig.MqttGateway mqttGateway;
